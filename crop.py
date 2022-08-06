@@ -7,13 +7,12 @@ Original file is located at
     https://colab.research.google.com/drive/1E1H9fcavFvnHLCxE82M6V_RSaTyK60su
 """
 
-# IMPORTANT VARIABLES
 resolution = 32 # new image resolution
 path = "/content/drive/MyDrive/work/image_crop/"
 
 # VISUALIZATION
 line_color = 'red'
-line_width = 3
+line_width = 100
 
 # from google.colab import drive
 # drive.mount("/content/drive/")
@@ -29,7 +28,7 @@ print(files)
 from PIL import Image, ImageFilter, ImageDraw
 
 
-def edit(img_path):
+def edit(img_path, offset = None):
     
     im = Image.open( img_path )
 
@@ -38,8 +37,11 @@ def edit(img_path):
     center_x = im.width / 2
     center_y = im.height / 2
 
-    ox = center_x - res / 2
-    oy = center_y - res / 2
+    if offset == None:
+        offset = (0, 0)
+
+    ox = (center_x - res / 2) + offset[0]
+    oy = (center_y - res / 2) + offset[1]
 
 
     up = (ox, oy, ox + res, oy)
@@ -68,12 +70,87 @@ def edit(img_path):
     print()
     display(new_im)
 
+from IPython.display import clear_output
+
+def realtime_edit(img_path, offset = None):
+    im = Image.open( img_path )
+
+    res: int = min(im.width, im.height) # res != resolution
+
+    center_x = im.width / 2
+    center_y = im.height / 2
+
+    if offset == None:
+        offset = (0, 0)
+
+
+    ox = (center_x - res / 2) + offset[0]
+    oy = center_y - res / 2 + offset[1]
+
+
+    up = (ox, oy, ox + res, oy)
+    down = (ox, oy + res, ox + res, oy + res)
+    left = (ox, oy, ox, oy + res)
+    right = (ox + res, oy, ox + res, oy + res)
+
+    draw = ImageDraw.Draw(im) 
+
+    draw.line(up, fill=line_color, width=line_width)
+    draw.line(down, fill=line_color, width=line_width)
+    draw.line(left, fill=line_color, width=line_width)
+    draw.line(right, fill=line_color, width=line_width)
+
+
+    mult: float = 3 * resolution / res
+
+    newsize = (int(im.width * mult), int(im.height * mult))
+    im = im.resize(newsize)
+
+    clear_output()
+    display(im)
+
+    letter: str = input("WASD for moving square: ")
+    
+    done = letter == ""
+
+    if done:
+        edit(img_path, offset)
+        return
+    
+    
+    dir = getVectorFromWASD(letter)
+    
+    offset_x = offset[0]
+    offset_x += dir[0] * line_width
+    offset_x = min(offset_x, im.width)
+
+    offset_y = offset[1]
+    offset_y += dir[1] * line_width
+    offset_y = min(offset_y, im.height)
+
+    offset = (offset_x, offset_y)
+
+    realtime_edit(img_path, offset)
+
+
+
+def getVectorFromWASD(_letter):
+    letter = _letter.upper()
+    if letter == "W":
+        return (0, 1)
+    elif letter == "A":
+        return (-1, 0)
+    elif letter == "S":
+        return (0, -1)
+    elif letter == "D":
+        return (1, 0)
+    return(0, 0)
+
 for img_filename in files:
     img_path = input_path + img_filename
 
-    edit(img_path)
-
-""""
+    realtime_edit(img_path)
+"""
 from PIL import Image, ImageFilter, ImageDraw
 
 img_path = "/content/drive/MyDrive/work/image_crop/test.png"
